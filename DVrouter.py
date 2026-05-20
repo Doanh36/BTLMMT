@@ -5,6 +5,8 @@
 #####################################################
 
 from router import Router
+from packet import Packet  
+import json
 
 
 class DVrouter(Router):
@@ -21,6 +23,13 @@ class DVrouter(Router):
         self.last_time = 0
         # TODO
         #   add your own class fields and initialization code here
+        
+        self.INFINITY = 16
+        self.my_vectors = {self.addr: 0}
+        self.forwarding_table = {}
+        self.neighbor_costs = {}
+        self.neighbor_vectors = {}
+
         pass
 
     def handle_packet(self, port, packet):
