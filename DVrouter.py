@@ -40,6 +40,9 @@ class DVrouter(Router):
             if dst in self.forwarding_table:
                 self.send(self.forwarding_table[dst], packet)
             return
+        else:
+            neighbor_vector = json.loads(packet.content)
+            self.neighbor_vectors[port] = neighbor_vector
 
     def handle_new_link(self, port, endpoint, cost):
         """Handle new link."""
