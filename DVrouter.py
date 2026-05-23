@@ -47,14 +47,6 @@ class DVrouter(Router):
         #   update the distance vector of this router
         #   update the forwarding table
         #   broadcast the distance vector of this router to neighbors
-        pass
-
-    def handle_remove_link(self, port):
-        """Handle removed link."""
-        # TODO
-        #   update the distance vector of this router
-        #   update the forwarding table
-        #   broadcast the distance vector of this router to neighbors
         self.neighbor_costs[port] = {'addr': endpoint, 'cost': cost}
         self.my_vectors[endpoint] = cost
         self.forwarding_table[endpoint] = port
@@ -63,6 +55,14 @@ class DVrouter(Router):
             pkt = Packet(Packet.ROUTING, self.addr, None)
             pkt.content = json.dumps(self.my_vectors)
             self.send(p, pkt)
+        pass
+
+    def handle_remove_link(self, port):
+        """Handle removed link."""
+        # TODO
+        #   update the distance vector of this router
+        #   update the forwarding table
+        #   broadcast the distance vector of this router to neighbors
         pass
 
     def handle_time(self, time_ms):
