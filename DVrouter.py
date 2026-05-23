@@ -66,6 +66,14 @@ class DVrouter(Router):
         #   update the distance vector of this router
         #   update the forwarding table
         #   broadcast the distance vector of this router to neighbors
+        self.neighbor_costs[port] = {'addr': endpoint, 'cost': cost}
+        self.my_vectors[endpoint] = cost
+        self.forwarding_table[endpoint] = port
+        
+        for p in self.neighbor_costs:
+            pkt = Packet(Packet.ROUTING, self.addr, None)
+            pkt.content = json.dumps(self.my_vectors)
+            self.send(p, pkt)
         pass
 
     def handle_time(self, time_ms):
