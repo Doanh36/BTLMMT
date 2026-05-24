@@ -44,6 +44,23 @@ class DVrouter(Router):
             neighbor_vector = json.loads(packet.content)
             self.neighbor_vectors[port] = neighbor_vector
 
+            changed = False
+          
+            for dst in neighbor_vector:
+                if dst == self.addr:
+                    continue 
+                
+                
+                cost_to_neighbor = self.neighbor_costs[port]['cost']
+                total_cost = cost_to_neighbor + neighbor_vector[dst]
+                
+ 
+                if dst not in self.my_vectors or total_cost < self.my_vectors[dst]:
+                    self.my_vectors[dst] = total_cost
+                    self.forwarding_table[dst] = port
+                    changed = True
+
+
     def handle_new_link(self, port, endpoint, cost):
         """Handle new link."""
         # TODO
