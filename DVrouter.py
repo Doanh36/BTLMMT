@@ -59,7 +59,11 @@ class DVrouter(Router):
                     self.my_vectors[dst] = total_cost
                     self.forwarding_table[dst] = port
                     changed = True
-
+                if changed:
+                for p in self.neighbor_costs:
+                    pkt = Packet(Packet.ROUTING, self.addr, None)
+                    pkt.content = json.dumps(self.my_vectors)
+                    self.send(p, pkt)
 
     def handle_new_link(self, port, endpoint, cost):
         """Handle new link."""
