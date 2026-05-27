@@ -59,8 +59,13 @@ class DVrouter(Router):
                     self.my_vectors[dst] = total_cost
                     self.forwarding_table[dst] = port
                     changed = True
-                if changed:
+            if changed:
                 for p in self.neighbor_costs:
+                    vec_to_send = self.my_vectors.copy()
+                    for dst, best_port in self.forwarding_table.items():
+                        if best_port == p:
+                            vec_to_send[dst] = self.INFINITY
+                            
                     pkt = Packet(Packet.ROUTING, self.addr, None)
                     pkt.content = json.dumps(self.my_vectors)
                     self.send(p, pkt)
