@@ -67,7 +67,7 @@ class DVrouter(Router):
                             vec_to_send[dst] = self.INFINITY
                             
                     pkt = Packet(Packet.ROUTING, self.addr, None)
-                    pkt.content = json.dumps(self.my_vectors)
+                    pkt.content = json.dumps(vec_to_send)
                     self.send(p, pkt)
 
     def handle_new_link(self, port, endpoint, cost):
@@ -87,7 +87,7 @@ class DVrouter(Router):
                     vec_to_send[dst] = self.INFINITY
                     
             pkt = Packet(Packet.ROUTING, self.addr, None)
-            pkt.content = json.dumps(self.my_vectors)
+            pkt.content = json.dumps(vec_to_send)
             self.send(p, pkt)
         pass
 
@@ -97,15 +97,10 @@ class DVrouter(Router):
         #   update the distance vector of this router
         #   update the forwarding table
         #   broadcast the distance vector of this router to neighbors
-        self.neighbor_costs[port] = {'addr': endpoint, 'cost': cost}
-        self.my_vectors[endpoint] = cost
-        self.forwarding_table[endpoint] = port
-        
-        for p in self.neighbor_costs:
-            pkt = Packet(Packet.ROUTING, self.addr, None)
-            pkt.content = json.dumps(self.my_vectors)
-            self.send(p, pkt)
-        pass
+        if port in self.neighbor_costs:
+            del self.neighbor_costs[port]
+        if port in self.neighbor_vectors:
+            del self.neighbor_vectors[port]
 
     def handle_time(self, time_ms):
         """Handle current time."""
