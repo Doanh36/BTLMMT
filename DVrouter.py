@@ -102,6 +102,15 @@ class DVrouter(Router):
         if port in self.neighbor_vectors:
             del self.neighbor_vectors[port]
 
+        new_vectors = {self.addr: 0}
+        new_ft = {}
+
+        all_dsts = set(self.my_vectors.keys())
+        for p in self.neighbor_vectors:
+            all_dsts.update(self.neighbor_vectors[p].keys())
+        for info in self.neighbor_costs.values():
+            all_dsts.add(info['addr'])
+
     def handle_time(self, time_ms):
         """Handle current time."""
         if time_ms - self.last_time >= self.heartbeat_time:
