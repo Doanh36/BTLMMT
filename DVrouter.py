@@ -111,6 +111,26 @@ class DVrouter(Router):
         for info in self.neighbor_costs.values():
             all_dsts.add(info['addr'])
 
+        for dst in all_dsts:
+            if dst == self.addr:
+                continue
+            best_dist = self.INFINITY
+            best_port = None
+           
+            for p, info in self.neighbor_costs.items():
+                if info['addr'] == dst and info['cost'] < best_dist:
+                    best_dist = info['cost']
+                    best_port = p
+                if p in self.neighbor_vectors and dst in self.neighbor_vectors[p]:
+                    total = info['cost'] + self.neighbor_vectors[p][dst]
+                    if total < best_dist:
+                        best_dist = total
+                        best_port = p
+           
+            new_vectors[dst] = best_dist
+            if best_port is not None and best_dist < self.INFINITY:
+                new_ft[dst] = best_port
+
     def handle_time(self, time_ms):
         """Handle current time."""
         if time_ms - self.last_time >= self.heartbeat_time:
