@@ -131,6 +131,19 @@ class DVrouter(Router):
             if best_port is not None and best_dist < self.INFINITY:
                 new_ft[dst] = best_port
 
+        self.my_vectors = new_vectors
+        self.forwarding_table = new_ft
+
+        for p in self.neighbor_costs:
+            vec_to_send = self.my_vectors.copy()
+            for dst, best_port in self.forwarding_table.items():
+                if best_port == p:
+                    vec_to_send[dst] = self.INFINITY
+                    
+            pkt = Packet(Packet.ROUTING, self.addr, None)
+            pkt.content = json.dumps(vec_to_send)
+            self.send(p, pkt)
+
     def handle_time(self, time_ms):
         """Handle current time."""
         if time_ms - self.last_time >= self.heartbeat_time:
