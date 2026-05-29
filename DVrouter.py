@@ -70,6 +70,18 @@ class DVrouter(Router):
                 new_vectors[dst] = best_dist
                 if best_port is not None and best_dist < self.INFINITY:
                     new_ft[dst] = best_port
+            if new_vectors != self.my_vectors or new_ft != self.forwarding_table:
+                self.my_vectors = new_vectors
+                self.forwarding_table = new_ft
+                
+                for p in self.neighbor_costs:
+                    vec_to_send = self.my_vectors.copy()
+                    for dst, best_port in self.forwarding_table.items():
+                        if best_port == p:
+                            vec_to_send[dst] = self.INFINITY
+                    pkt = Packet(Packet.ROUTING, self.addr, None)
+                    pkt.content = json.dumps(vec_to_send)
+                    self.send(p, pkt)
 
     def handle_new_link(self, port, endpoint, cost):
         """Handle new link."""
