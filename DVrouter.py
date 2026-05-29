@@ -41,34 +41,35 @@ class DVrouter(Router):
                 self.send(self.forwarding_table[dst], packet)
             return
         else:
-            neighbor_vector = json.loads(packet.content)
-            self.neighbor_vectors[port] = neighbor_vector
-
-            changed = False
-          
-            for dst in neighbor_vector:
-                if dst == self.addr:
-                    continue 
-                
-                
-                cost_to_neighbor = self.neighbor_costs[port]['cost']
-                total_cost = cost_to_neighbor + neighbor_vector[dst]
-                
+            self.neighbor_vectors[port] = json.loads(packet.content)
  
-                if dst not in self.my_vectors or total_cost < self.my_vectors[dst]:
-                    self.my_vectors[dst] = total_cost
-                    self.forwarding_table[dst] = port
-                    changed = True
-            if changed:
-                for p in self.neighbor_costs:
-                    vec_to_send = self.my_vectors.copy()
-                    for dst, best_port in self.forwarding_table.items():
-                        if best_port == p:
-                            vec_to_send[dst] = self.INFINITY
-                            
-                    pkt = Packet(Packet.ROUTING, self.addr, None)
-                    pkt.content = json.dumps(vec_to_send)
-                    self.send(p, pkt)
+            new_vectors = {self.addr: 0}
+            new_ft = {}
+ 
+            all_dsts = set(self.my_vectors.keys())
+            for p in self.neighbor_vectors:
+                all_dsts.update(self.neighbor_vectors[p].keys())
+            for info in self.neighbor_costs.values():
+                all_dsts.add(info['addr'])
+ 
+            for dst in all_dsts:
+                if dst == self.addr:
+                    continue
+                best_dist = self.INFINITY
+                best_port = None
+                for p, info in self.neighbor_costs.items():
+                    if info['addr'] == dst and info['cost'] < best_dist:
+                        best_dist = info['cost']
+                        best_port = p
+                   
+                    if p in self.neighbor_vectors and dst in self.neighbor_vectors[p]:
+                        total = info['cost'] + self.neighbor_vectors[p][dst]
+                        if total < best_dist:
+                            best_dist = total
+                            best_port = p
+                new_vectors[dst] = best_dist
+                if best_port is not None and best_dist < self.INFINITY:
+                    new_ft[dst] = best_port
 
     def handle_new_link(self, port, endpoint, cost):
         """Handle new link."""
