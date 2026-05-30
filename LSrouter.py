@@ -5,6 +5,8 @@
 #####################################################
 
 from router import Router
+from packet import Packet 
+import json
 
 
 class LSrouter(Router):
@@ -21,7 +23,41 @@ class LSrouter(Router):
         self.last_time = 0
         # TODO
         #   add your own class fields and initialization code here
+        
+        self.neighbors = {}
+        
+        self.lsdb = {}  
+        
+        self.forwarding_table = {}
+        
+        self.seq_num = 0
+        
+        self.lsdb[self.addr] = {
+            "seq": self.seq_num, 
+            "links": {}
+        }
         pass
+    
+    def create_lsp(self, router): 
+        data = self.lsdb[router] 
+        return json.dumps({              
+            "router": router, 
+            "seq": data["seq"], 
+            "links": data["links"] 
+        })
+        
+    def flood_lsp(self, exclude_port=None):
+        for router in self.lsdb:    
+            payload = self.create_lsp(router)
+            for port in self.neighbors:
+                if port != exclude_port:
+                    packet = Packet( 
+                        Packet.ROUTING, 
+                        self.addr, 
+                        None, 
+                        payload 
+                    )
+                self.send(port, packet)
 
     def handle_packet(self, port, packet):
         """Process incoming packet."""
