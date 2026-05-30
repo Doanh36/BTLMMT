@@ -91,15 +91,20 @@ class LSrouter(Router):
                 if destination == self.addr: 
                     continue
                 current = destination
-                while current in prev and prev[current] != self.addr: 
+                while prev.get(current) != self.addr:
+                    if current not in prev :
+                        current = None
+                        break
                     current = prev[current]
-                if current not in prev and current != destination: 
+                if current is None :
                     continue
                 next_hop = current
                 for port, (neighbor, _) in self.neighbors.items():
                     if neighbor == next_hop:
                         self.forwarding_table[destination] = port
                         break
+                    
+                
     def handle_packet(self, port, packet):
         """Process incoming packet."""
         # TODO
@@ -177,7 +182,7 @@ class LSrouter(Router):
                 
                 self.last_time = time_ms
                 self.flood_lsp()
-            pass
+            pass    
 
     def __repr__(self):
         """Representation for debugging in the network visualizer."""
