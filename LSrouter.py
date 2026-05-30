@@ -7,6 +7,7 @@
 from router import Router
 from packet import Packet 
 import json
+import heapq
 
 
 class LSrouter(Router):
@@ -46,6 +47,8 @@ class LSrouter(Router):
             "links": data["links"] 
         })
         
+    
+        
     def flood_lsp(self, exclude_port=None):
         for router in self.lsdb:    
             payload = self.create_lsp(router)
@@ -58,7 +61,45 @@ class LSrouter(Router):
                         payload 
                     )
                 self.send(port, packet)
-
+    def run_dijkstra(self):
+            graph = {}
+            
+            for router, data in self.lsdb.items():
+                if router not in graph:
+                    graph[router] = {}
+                    
+            for neighbor, cost in data["links"].items():
+                graph[router][neighbor] = cost
+                if neighbor not in graph:
+                    graph[neighbor] = {}
+                graph[neighbor][router] = cost  
+            dist = {self.addr: 0}
+            prev = {}
+            pq = [(0, self.addr)]
+            while pq:
+                current_dist, node = heapq.heappop(pq)
+                if current_dist > dist[node]: 
+                    continue
+                for neighbor, cost in graph.get(node, {}).items():
+                    new_dist = current_dist + cost
+                    if neighbor not in dist or new_dist < dist[neighbor]:
+                        dist[neighbor] = new_dist
+                        prev[neighbor] = node
+                        heapq.heappush(pq, (new_dist, neighbor))
+            self.forwarding_table = {}
+            for destination in dist:
+                if destination == self.addr: 
+                    continue
+                current = destination
+                while current in prev and prev[current] != self.addr: 
+                    current = prev[current]
+                if current not in prev and current != destination: 
+                    continue
+                next_hop = current
+                for port, (neighbor, _) in self.neighbors.items():
+                    if neighbor == next_hop:
+                        self.forwarding_table[destination] = port
+                        break
     def handle_packet(self, port, packet):
         """Process incoming packet."""
         # TODO
