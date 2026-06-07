@@ -163,10 +163,18 @@ class DVrouter(Router):
             self.last_time = time_ms
             # TODO
             #   broadcast the distance vector of this router to neighbors
+            for p in self.neighbor_costs:
+                vec_to_send = self.my_vectors.copy()
+                for dst, best_port in self.forwarding_table.items():
+                    if best_port == p:
+                        vec_to_send[dst] = 16
+                pkt = Packet(Packet.ROUTING, self.addr, None)
+                pkt.content = json.dumps(vec_to_send)
+                self.send(p, pkt)
             pass
 
     def __repr__(self):
         """Representation for debugging in the network visualizer."""
         # TODO
         #   NOTE This method is for your own convenience and will not be graded
-        return f"DVrouter(addr={self.addr})"
+        return json.dumps(self.my_vectors)
