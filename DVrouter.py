@@ -102,7 +102,7 @@ class DVrouter(Router):
         for dst in all_dsts:
             if dst == self.addr:
                 continue
-            best_dist = 16
+            best_dist = self.INFINITY
             best_port = None
             for p, info in self.neighbor_costs.items():
                 if info['addr'] == dst and info['cost'] < best_dist:
@@ -114,7 +114,7 @@ class DVrouter(Router):
                         best_dist = total
                         best_port = p
             new_vectors[dst] = best_dist
-            if best_port is not None and best_dist < 16:
+            if best_port is not None and best_dist < self.INFINITY:
                 new_ft[dst] = best_port
                 
         if new_vectors != self.my_vectors or new_ft != self.forwarding_table:
@@ -194,7 +194,7 @@ class DVrouter(Router):
                 vec_to_send = self.my_vectors.copy()
                 for dst, best_port in self.forwarding_table.items():
                     if best_port == p:
-                        vec_to_send[dst] = 16
+                        vec_to_send[dst] = self.INFINITY
                 pkt = Packet(Packet.ROUTING, self.addr, None)
                 pkt.content = json.dumps(vec_to_send)
                 self.send(p, pkt)
