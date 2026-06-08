@@ -90,8 +90,32 @@ class DVrouter(Router):
         #   update the forwarding table
         #   broadcast the distance vector of this router to neighbors
         self.neighbor_costs[port] = {'addr': endpoint, 'cost': cost}
-        self.my_vectors[endpoint] = cost
-        self.forwarding_table[endpoint] = port
+        new_vectors = {self.addr: 0}
+        new_ft = {}
+ 
+        all_dsts = set(self.my_vectors.keys())
+        for p in self.neighbor_vectors:
+            all_dsts.update(self.neighbor_vectors[p].keys())
+        for info in self.neighbor_costs.values():
+            all_dsts.add(info['addr'])
+ 
+        for dst in all_dsts:
+            if dst == self.addr:
+                continue
+            best_dist = 16
+            best_port = None
+            for p, info in self.neighbor_costs.items():
+                if info['addr'] == dst and info['cost'] < best_dist:
+                    best_dist = info['cost']
+                    best_port = p
+                if p in self.neighbor_vectors and dst in self.neighbor_vectors[p]:
+                    total = info['cost'] + self.neighbor_vectors[p][dst]
+                    if total < best_dist:
+                        best_dist = total
+                        best_port = p
+            new_vectors[dst] = best_dist
+            if best_port is not None and best_dist < 16:
+                new_ft[dst] = best_port
         
         for p in self.neighbor_costs:
             vec_to_send = self.my_vectors.copy()
