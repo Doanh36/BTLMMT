@@ -19,162 +19,188 @@ class LSrouter(Router):
     """
 
     def __init__(self, addr, heartbeat_time):
-        Router.__init__(self, addr)  # Initialize base class - DO NOT REMOVE
+
+        Router.__init__(self, addr)
+
         self.heartbeat_time = heartbeat_time
         self.last_time = 0
-        # TODO
-        #   add your own class fields and initialization code here
-        
+
         self.neighbors = {}
-        
-        self.lsdb = {}  
-        
+
+        self.lsdb = {}
+
         self.forwarding_table = {}
-        
+
         self.seq_num = 0
-        
+
         self.lsdb[self.addr] = {
-            "seq": self.seq_num, 
+            "seq": self.seq_num,
             "links": {}
         }
-        pass
     
-    def create_lsp(self, router): 
-        data = self.lsdb[router] 
-        return json.dumps({              
-            "router": router, 
-            "seq": data["seq"], 
-            "links": data["links"] 
+    def create_lsp(self, router):
+
+        data = self.lsdb[router]
+
+        return json.dumps({
+            "router": router,
+            "seq": data["seq"],
+            "links": data["links"]
         })
-        
-    
-        
+
     def flood_packet(self, packet, exclude_port=None):
+
         for port in self.neighbors:
+
             if port != exclude_port:
+
                 self.send(port, packet)
     
     
     def run_dijkstra(self):
-            graph = {}
-            
-            for router, data in self.lsdb.items():
-                if router not in graph:
-                    graph[router] = {}
-                    
-                for neighbor, cost in data["links"].items():
-                    graph[router][neighbor] = cost
-                    if neighbor not in graph:
-                        graph[neighbor] = {}
-                    graph[neighbor][router] = cost  
-            dist = {self.addr: 0}
-            prev = {}
-            pq = [(0, self.addr)]
-            while pq:
-                current_dist, node = heapq.heappop(pq)
-                if current_dist > dist[node]: 
-                    continue
-                for neighbor, cost in graph.get(node, {}).items():
-                    new_dist = current_dist + cost
-                    if neighbor not in dist or new_dist < dist[neighbor]:
-                        dist[neighbor] = new_dist
-                        prev[neighbor] = node
-                        heapq.heappush(pq, (new_dist, neighbor))
-            self.forwarding_table = {}
-            for destination in dist:
-                if destination == self.addr: 
-                    continue
-                current = destination
-                while prev.get(current) != self.addr:
-                    if current not in prev :
-                        current = None
-                        break
-                    current = prev[current]
-                if current is None :
-                    continue
-                next_hop = current
-                for port, (neighbor, _) in self.neighbors.items():
-                    if neighbor == next_hop:
-                        self.forwarding_table[destination] = port
-                        break
+
+        graph = {}
+
+        for router, data in self.lsdb.items():
+
+            if router not in graph:
+                graph[router] = {}
+
+            for neighbor, cost in data["links"].items():
+
+                graph[router][neighbor] = cost
+
+                if neighbor not in graph:
+                    graph[neighbor] = {}
+
+                graph[neighbor][router] = cost
+
+        dist = {self.addr: 0}
+        prev = {}
+
+        pq = [(0, self.addr)]
+
+        while pq:
+
+            current_dist, node = heapq.heappop(pq)
+
+            if current_dist > dist[node]:
+                continue
+
+            for neighbor, cost in graph.get(node, {}).items():
+
+                new_dist = current_dist + cost
+
+                if neighbor not in dist or new_dist < dist[neighbor]:
+
+                    dist[neighbor] = new_dist
+                    prev[neighbor] = node
+
+                    heapq.heappush(pq, (new_dist, neighbor))
+
+        self.forwarding_table = {}
+
+        for destination in dist:
+
+            if destination == self.addr:
+                continue
+
+            current = destination
+
+            while prev.get(current) != self.addr:
+
+                if current not in prev:
+                    current = None
+                    break
+
+                current = prev[current]
+
+            if current is None:
+                continue
+
+            next_hop = current
+
+            for port, (neighbor, _) in self.neighbors.items():
+
+                if neighbor == next_hop:
+
+                    self.forwarding_table[destination] = port
+                    break
                     
                 
     def handle_packet(self, port, packet):
-        """Process incoming packet."""
-        # TODO
+
         if packet.is_traceroute:
-            # Hint: this is a normal data packet
-            # If the forwarding table contains packet.dst_addr
-            #   send packet based on forwarding table, e.g., self.send(port, packet)
+
             if packet.dst_addr == self.addr:
-                return 
+                return
+
             if packet.dst_addr in self.forwarding_table:
+
                 out_port = self.forwarding_table[packet.dst_addr]
+
                 self.send(out_port, packet)
-            pass
+
         else:
-            # Hint: this is a routing packet generated by your routing protocol
-            # If the sequence number is higher and the received link state is different
-            #   update the local copy of the link state
-            #   update the forwarding table
-            #   broadcast the packet to other neighbors
+
             data = json.loads(packet.content)
+
             router = data["router"]
             seq = data["seq"]
             links = data["links"]
-                
+
             if (router not in self.lsdb or
-                seq > self.lsdb[router]["seq"]):
+                    seq > self.lsdb[router]["seq"]):
+
                 self.lsdb[router] = {
                     "seq": seq,
                     "links": links
                 }
+
                 self.run_dijkstra()
-                self.flood_lsp(exclude_port=port)
-            pass
+
+                self.flood_packet(packet, exclude_port=port)
 
     def handle_new_link(self, port, endpoint, cost):
-        """Handle new link."""
-        # TODO
-        #   update local data structures and forwarding table
-        #   broadcast the new link state of this router to all neighbors
+
         self.neighbors[port] = (endpoint, cost)
+
+        # update own LSP
         self.lsdb[self.addr]["links"][endpoint] = cost
+
         self.seq_num += 1
         self.lsdb[self.addr]["seq"] = self.seq_num
-        
+
         self.run_dijkstra()
-        
+
         payload = self.create_lsp(self.addr)
+
         packet = Packet(
             Packet.ROUTING,
             self.addr,
             None,
             payload
         )
-        
-        self.flood_packet(packet)
-        pass
 
+        self.flood_packet(packet)
     def handle_remove_link(self, port):
-        """Handle removed link."""
-        # TODO
-        #   update local data structures and forwarding table
-        #   broadcast the new link state of this router to all neighbors
+
         if port not in self.neighbors:
-            return 
+            return
+
         endpoint, _ = self.neighbors[port]
-        
+
         del self.neighbors[port]
-        
-        if endpoint in self.lsdb[self.addr]["links"]: 
+
+        if endpoint in self.lsdb[self.addr]["links"]:
+
             del self.lsdb[self.addr]["links"][endpoint]
-            
+
         self.seq_num += 1
         self.lsdb[self.addr]["seq"] = self.seq_num
-        
+
         self.run_dijkstra()
-        
+
         payload = self.create_lsp(self.addr)
 
         packet = Packet(
@@ -183,16 +209,15 @@ class LSrouter(Router):
             None,
             payload
         )
-        
+
         self.flood_packet(packet)
-        pass
 
     def handle_time(self, time_ms):
-        """Handle current time."""
+
         if time_ms - self.last_time >= self.heartbeat_time:
+
             self.last_time = time_ms
-            # TODO
-            #   broadcast the link state of this router to all neighbors
+
             payload = self.create_lsp(self.addr)
 
             packet = Packet(
@@ -203,11 +228,7 @@ class LSrouter(Router):
             )
 
             self.flood_packet(packet)
-            
-            pass    
 
     def __repr__(self):
-        """Representation for debugging in the network visualizer."""
-        # TODO
-        #   NOTE This method is for your own convenience and will not be graded
+
         return f"LSrouter(addr={self.addr}, table={self.forwarding_table})"
